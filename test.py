@@ -1,53 +1,83 @@
+# -*- coding: utf-8 -*-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from textblob import TextBlob
 
-st.title("📍 지하철 혼잡도 기반 최선 경로 추천 (샘플)")
+st.set_page_config(page_title="마음 온도계 – 자살 예방 지원", layout="wide")
+st.title("💛 마음 온도계 – 자살 예방 지원 대시보드")
 
-# --- CSV 불러오기 ---
-congestion_df = pd.read_csv("subway_congestion_sample.csv")
+# -------------------------------
+# 1️⃣ 오늘의 마음 체크
+# -------------------------------
+st.header("1️⃣ 오늘의 마음을 체크해보세요")
+st.markdown("간단히 한 문장으로 지금 기분을 표현하거나 감정을 선택해주세요.")
 
-# --- 사용자 입력 ---
-start_station = st.sidebar.text_input("출발역명", "잠실역")
-end_station = st.sidebar.text_input("도착역명", "강남역")
-time_hour = st.sidebar.slider("이용 시간대(시)", 5, 24, 18)
+# 옵션 1: 감정 선택
+emotion = st.selectbox("기분 선택", ["😊 행복", "😐 보통", "😔 슬픔", "😢 외로움", "😡 화남", "😰 불안"])
 
-# --- 데이터 처리 함수 ---
-def get_station_congestion(station, hour):
-    rec = congestion_df[(congestion_df["역명"] == station) & (congestion_df["시간대"] == hour)]
-    return rec["혼잡도(%)"].iloc[0] if not rec.empty else None
+# 옵션 2: 자유 텍스트 입력
+text_input = st.text_area("자유롭게 지금 기분을 적어보세요 (선택)")
 
-def compute_path_score(path):
-    scores = [get_station_congestion(s, time_hour) for s in path]
-    scores = [s for s in scores if s is not None]
-    return sum(scores)/len(scores) if scores else float("inf")
+# -------------------------------
+# 2️⃣ 감정 분석 + 위험도
+# -------------------------------
+st.header("2️⃣ 분석 결과")
 
-# --- 경로 후보 ---
-paths = {
-    "경로 A": ["잠실역","선릉역","강남역"],
-    "경로 B": ["잠실역","교대역","서초역","강남역"]
-}
+def analyze_emotion(text, selected_emotion):
+    if text.strip() != "":
+        blob = TextBlob(text)
+        polarity = blob.sentiment.polarity  # -1 ~ +1
+        if polarity < -0.5:
+            risk = "높음 ⚠️"
+            feedback = "지금 힘든 감정을 느끼고 있네요. 혼자가 아니에요."
+        elif polarity < 0:
+            risk = "보통 ⚠"
+            feedback = "조금 우울한 기분이 있군요. 작은 산책이나 휴식이 도움될 수 있어요."
+        else:
+            risk = "낮음 ✅"
+            feedback = "좋아요! 오늘 기분이 비교적 안정적이에요."
+    else:
+        # 선택 감정 기반 간단 위험도
+        if selected_emotion in ["😔 슬픔", "😢 외로움", "😰 불안"]:
+            risk = "보통 ⚠"
+            feedback = "조금 우울하거나 외로운 감정이 있군요. 스스로 돌보는 시간을 가지세요."
+        else:
+            risk = "낮음 ✅"
+            feedback = "좋아요! 오늘 기분이 비교적 안정적이에요."
+    return risk, feedback
 
-scores = {p: compute_path_score(paths[p]) for p in paths}
-best_path = min(scores, key=scores.get)
+risk_level, feedback_text = analyze_emotion(text_input, emotion)
+st.metric(label="현재 위험도", value=risk_level)
+st.info(feedback_text)
 
-# --- 출력 ---
-st.subheader("추천 경로")
-st.write(f"**{best_path}** (예상 평균 혼잡도: {scores[best_path]:.1f}%)")
+# -------------------------------
+# 3️⃣ 상담 및 도움 정보
+# -------------------------------
+st.header("3️⃣ 긴급 상담/지원 정보")
 
-df_out = pd.DataFrame({
-    "경로": list(scores.keys()),
-    "예상 평균 혼잡도(%)": list(scores.values())
-})
-
-fig = px.bar(df_out, x="경로", y="예상 평균 혼잡도(%)",
-             color="예상 평균 혼잡도(%)",
-             color_continuous_scale=["green","yellow","red"])
-st.plotly_chart(fig)
-
-st.subheader("혼잡 대비 팁")
 st.markdown("""
-- 혼잡도가 높은 시간대·역은 피하는 것이 좋습니다.
-- 환승이 많은 경로는 환승역 체류 시간이 길어져 혼잡 가능성이 있습니다.
-- 추천 경로라도 실시간 상황을 참고하세요.
+- ☎️ **1393**: 자살예방상담전화  
+- ☎️ **1588-9191**: 생명의전화  
+- ☎️ **1577-0199**: 정신건강상담  
+- 지역별 정신건강복지센터 검색: [바로가기](https://www.mindmap.or.kr)
 """)
+
+# -------------------------------
+# 4️⃣ 자살률 통계 시각화
+# -------------------------------
+st.header("4️⃣ 연령별/성별 자살률 통계 (샘플 데이터)")
+
+# 샘플 통계 데이터
+data = {
+    "연령대": ["10대","20대","30대","40대","50대","60대"],
+    "남성 자살률": [8, 22, 30, 35, 40, 45],
+    "여성 자살률": [5, 12, 18, 20, 25, 30]
+}
+df = pd.DataFrame(data)
+
+fig = px.bar(df, x="연령대", y=["남성 자살률","여성 자살률"], barmode="group",
+             labels={"value":"자살률 (명/10만명)", "연령대":"연령대"})
+st.plotly_chart(fig, use_container_width=True)
+
+st.markdown("※ 실제 데이터 기반으로 연령별·성별 자살률 변화를 시각화한 예시입니다.")
