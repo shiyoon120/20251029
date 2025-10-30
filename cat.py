@@ -1,5 +1,8 @@
+# 파일명: firemeow_app.py
+import streamlit as st
 import random
-import time
+
+st.title("🐾 불이야냥! (Fire Meow!) 🧯")
 
 fires = ["주방", "전기 콘센트", "쓰레기통", "촛불", "캠핑장"]
 tips = {
@@ -10,31 +13,30 @@ tips = {
     "캠핑장": "모닥불은 꼭 꺼지고 확인하라냥!"
 }
 
-print("🐾🐾🐾 불이야냥! 🧯🐱")
-print("귀여운 소방냥이 '호냥'과 함께 불을 꺼보자냥!\n")
-
 fire = random.choice(fires)
-print(f"🔥 {fire}에서 불이 났다냥!! 어서 가자냥!!")
+st.subheader(f"🔥 {fire}에서 불이 났다냥!! 어서 불을 꺼보자냥!")
 
-time.sleep(1)
-success = 0
+if "success" not in st.session_state:
+    st.session_state.success = 0
+    st.session_state.round = 1
 
-for i in range(3):
-    hit = input("💧 물풍선을 던질까요? (y/n): ")
-    if hit.lower() == "y":
-        print("💦 불이 조금씩 약해진다냥!")
-        success += 1
+if st.button("💧 물풍선 던지기!"):
+    st.session_state.success += 1
+    st.success("불이 조금 약해졌다냥!")
+    st.session_state.round += 1
+
+if st.button("🔥 그냥 보기"):
+    st.warning("불이 점점 커지고 있다냥!")
+    st.session_state.round += 1
+
+if st.session_state.round > 3:
+    if st.session_state.success >= 2:
+        st.balloons()
+        st.success("🎉 불이 완전히 꺼졌다냥!")
     else:
-        print("🔥 불이 커지고 있다냥!! 조심하라냥!")
-
-time.sleep(1)
-if success >= 2:
-    print("\n🎉 불이 완전히 꺼졌다냥!")
-else:
-    print("\n😭 아깝다냥! 불이 완전히 꺼지진 않았지만, 다음엔 더 잘할거다냥!")
-
-print(f"\n🐾 원인은 '{fire}' 때문이래냥.")
-print("📘 예방법:", tips[fire])
-
-time.sleep(1)
-print("\n✨ 오늘도 마을이 조금 더 안전해졌다냥!")
+        st.error("😭 아깝다냥! 불이 완전히 꺼지진 않았지만, 다음엔 더 잘할거다냥!")
+    st.info(f"🐾 원인은 **{fire}** 때문이래냥!\n📘 예방법: {tips[fire]}")
+    if st.button("다시 하기 🔁"):
+        st.session_state.success = 0
+        st.session_state.round = 1
+        st.experimental_rerun()
